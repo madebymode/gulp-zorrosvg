@@ -77,10 +77,10 @@ module.exports = (options) => {
 
     // Create a canvas 2x the height of the original image.
     // Keep the original image on top and paste a copy of it on the bottom.
-    image.toBuffer(function(error, imageBuffer, imageInfo) {
+    image.toBuffer(function (error, imageBuffer, imageInfo) {
       if (error) {
         error.message = errorPrefix + error.message;
-        return callback(new gutil.PluginError(PLUGIN_NAME, error, { showStack: true }));
+        return callback(new gutil.PluginError(PLUGIN_NAME, error, {showStack: true}));
       }
       // Force transparent background
       return image.resize({
@@ -88,65 +88,78 @@ module.exports = (options) => {
           r: 0,
           g: 0,
           b: 0,
-          alpha: 0 }
+          alpha: 0
+        }
       })
-      // Double canvas height
-        .extend({ top: 0, right: 0, bottom: imageInfo.height, left: 0 })
-      // Paste image
+        // Double canvas height
+        .extend({
+          top: 0,
+          right: 0,
+          bottom: imageInfo.height,
+          left: 0
+        })
+        // Paste image
         .composite([
           {
             input: imageBuffer,
-            top: imageInfo.height, left: 0
+            top: imageInfo.height,
+            left: 0
           }
-          ])
-      // Get raw pixel data to manipulate
-        .raw().toBuffer(function(error, compositeBuffer, compositeInfo) {
-        if (error) {
-          error.message = errorPrefix + error.message;
-          return callback(new gutil.PluginError(PLUGIN_NAME, error, { showStack: true }));
-        }
-
-        // Make the original image fully opaque
-        for (let i = 0; i < compositeBuffer.length / 2; i = i + 4) {
-          compositeBuffer[i + 3] = 255;
-        }
-        // Create a luminance mask based on the original image's alpha channel
-        // Add gamma correction for semi-transparent pixels
-        for (let i = compositeBuffer.length / 2; i < compositeBuffer.length; i = i + 4) {
-          let alpha = compositeBuffer[i + 3];
-          compositeBuffer[i + 0] = alpha;
-          compositeBuffer[i + 1] = alpha;
-          compositeBuffer[i + 2] = alpha;
-          compositeBuffer[i + 3] = 255;
-        }
-
-        // Compress as JPG
-        sharp(compositeBuffer, { raw: { width: compositeInfo.width, height: compositeInfo.height, channels: compositeInfo.channels } })
-          .jpeg().toBuffer(function(error, finalBuffer, finalInfo) {
+        ])
+        // Get raw pixel data to manipulate
+        .raw().toBuffer(function (error, compositeBuffer, compositeInfo) {
           if (error) {
             error.message = errorPrefix + error.message;
-            return callback(new gutil.PluginError(PLUGIN_NAME, error, { showStack: true }));
+            return callback(new gutil.PluginError(PLUGIN_NAME, error, {showStack: true}));
           }
 
-          // Final SVG conversion
-          let newFile = getSvg(finalBuffer, {
-            cwd: file.cwd,
-            base: file.base,
-            path: file.path,
-            width: finalInfo.width,
-            height: finalInfo.height
+          // Make the original image fully opaque
+          for (let i = 0; i < compositeBuffer.length / 2; i = i + 4) {
+            compositeBuffer[i + 3] = 255;
+          }
+          // Create a luminance mask based on the original image's alpha channel
+          // Add gamma correction for semi-transparent pixels
+          for (let i = compositeBuffer.length / 2; i < compositeBuffer.length; i = i + 4) {
+            let alpha = compositeBuffer[i + 3];
+            compositeBuffer[i + 0] = alpha;
+            compositeBuffer[i + 1] = alpha;
+            compositeBuffer[i + 2] = alpha;
+            compositeBuffer[i + 3] = 255;
+          }
+
+          // Compress as JPG
+          sharp(compositeBuffer, {
+            raw: {
+              width: compositeInfo.width,
+              height: compositeInfo.height,
+              channels: compositeInfo.channels
+            }
+          })
+            .jpeg().toBuffer(function (error, finalBuffer, finalInfo) {
+            if (error) {
+              error.message = errorPrefix + error.message;
+              return callback(new gutil.PluginError(PLUGIN_NAME, error, {showStack: true}));
+            }
+
+            // Final SVG conversion
+            let newFile = getSvg(finalBuffer, {
+              cwd: file.cwd,
+              base: file.base,
+              path: file.path,
+              width: finalInfo.width,
+              height: finalInfo.height
+            });
+
+            totalFiles++;
+
+            if (options.verbose) {
+              gutil.log(`${PLUGIN_NAME}: ${chalk.green('✔')} ${chalk.blue(file.relative + ' -> ' + newFile.relative)}`);
+            }
+
+            // TODO: Responsive sizes
+            callback(null, newFile);
           });
-
-          totalFiles++;
-
-          if (options.verbose) {
-            gutil.log(`${PLUGIN_NAME}: ${chalk.green('✔')} ${chalk.blue(file.relative + ' -> ' + newFile.relative)}`);
-          }
-
-          // TODO: Responsive sizes
-          callback(null, newFile);
         });
-      });
     });
   }, callback => {
     gutil.log(`${PLUGIN_NAME}: Generated ${totalFiles} ZorroSVG ${plur('file', totalFiles)}.`);
