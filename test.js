@@ -25,6 +25,13 @@ test('generate alpha masks', async (t) => {
   const {buffer, stream} = await createFixture();
   const file = await getStream.array(stream);
 
+    console.log(file);
+    console.log(file[0].contents);
+
+    fs.writeFileSync('test/test_mask.svg', file[0].contents,function(err) {
+      if (err) throw 'error writing file: ' + err;
+    });
+    
   t.true(file[0].contents.length < buffer.length);
 });
 
