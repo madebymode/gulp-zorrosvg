@@ -83,11 +83,22 @@ module.exports = (options) => {
         return callback(new gutil.PluginError(PLUGIN_NAME, error, { showStack: true }));
       }
       // Force transparent background
-      return image.background({ r: 0, g: 0, b: 0, alpha: 0 })
+      return image.resize({
+        background: {
+          r: 0,
+          g: 0,
+          b: 0,
+          alpha: 0 }
+      })
       // Double canvas height
         .extend({ top: 0, right: 0, bottom: imageInfo.height, left: 0 })
       // Paste image
-        .overlayWith(imageBuffer, { top: imageInfo.height, left: 0 })
+        .composite([
+          {
+            input: imageBuffer,
+            top: imageInfo.height, left: 0
+          }
+          ])
       // Get raw pixel data to manipulate
         .raw().toBuffer(function(error, compositeBuffer, compositeInfo) {
         if (error) {
