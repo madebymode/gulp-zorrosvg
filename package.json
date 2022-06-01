@@ -37,7 +37,7 @@
     "gulp-util": "^3.0.8",
     "path": "^0.12.7",
     "plur": "^2.1.2",
-    "sharp": "^0.17.1",
+    "sharp": "^0.30.5",
     "through2-concurrent": "^1.1.1"
   },
   "devDependencies": {
